@@ -3,6 +3,7 @@ package com.tpi.facturacion.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,9 +14,14 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Verificar si ya hay datos
-        Integer tarifasCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM v2_tarifas", Integer.class);
-        
+        // Verificar si ya hay datos (protegido contra tablas aún no creadas)
+        Integer tarifasCount = null;
+        try {
+            tarifasCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM v2_tarifas", Integer.class);
+        } catch (DataAccessException ex) {
+            System.out.println("⚠️ Tabla v2_tarifas no disponible todavía, omitiendo carga inicial de Facturación");
+        }
+
         if (tarifasCount != null && tarifasCount == 0) {
             System.out.println("🔄 Cargando datos iniciales de Facturación...");
             

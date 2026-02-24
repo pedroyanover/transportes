@@ -2,6 +2,7 @@ package com.tpi.logistica.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -13,9 +14,14 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Verificar si ya hay datos
-        Integer transportistasCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM v2_transportistas", Integer.class);
-        
+        // Verificar si ya hay datos (protegido contra tablas aún no creadas)
+        Integer transportistasCount = null;
+        try {
+            transportistasCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM v2_transportistas", Integer.class);
+        } catch (DataAccessException ex) {
+            System.out.println("⚠️ Tabla v2_transportistas no disponible todavía, omitiendo carga inicial de Logística");
+        }
+
         if (transportistasCount != null && transportistasCount == 0) {
             System.out.println("🔄 Cargando datos iniciales de Logística...");
             

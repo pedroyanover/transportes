@@ -1,18 +1,18 @@
+# VERSION DE DOCKER COMPOSE
 version: '3.8'
 
+# CREA RED VIRTUAL INTERNA. LOS SERVICIOS SE COMUNICAN
+# USANDO DNS INTERNO.
+
+# Aislamiento: Los servicios solo son accesibles entre ellos y mediante puertos expuestos
 networks:
   backend-net:
     driver: bridge
 
 services:
-  # ====================================================================================================================
-  # ⚙️ SERVICIOS DE INFRAESTRUCTURA (Keycloak, Eureka, PostgreSQL, PgAdmin)
-  # ====================================================================================================================
-  
-  # Eureka Discovery Server
   eureka-server:
-    build: # 👈 Usa tu código fuente
-      context: ./eureka-server # 👈 Asegúrate que la ruta a tu proyecto Eureka sea correcta
+    build:
+      context: ./eureka-server
       dockerfile: Dockerfile
     container_name: eureka-server
     ports:
@@ -20,41 +20,43 @@ services:
     networks:
       - backend-net
     environment:
-      # Estos se mantienen para asegurar la configuración en el contenedor
       SPRING_APPLICATION_NAME: eureka-server
       EUREKA_SERVER_PORT: 8761
       EUREKA_INSTANCE_HOSTNAME: eureka-server
 
-  # PostgreSQL Database
   postgres:
     image: postgres:16
     container_name: postgres
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: tpi_db
-      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata # UBICACION DONDE SE GUARDAN LOS DATOS.
       TZ: America/Argentina/Buenos_Aires
       PGTZ: America/Argentina/Buenos_Aires
     volumes:
       - ./pgdata:/var/lib/postgresql/data/pgdata
-      # Asumo que tus archivos schema.sql y data.sql están en ./db/scripts
-      - ./db/scripts/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql
-      - ./db/scripts/data.sql:/docker-entrypoint-initdb.d/20-data.sql
+      # SOLO datos de prueba iniciales (opcional)
+      # - ./db/scripts/data.sql:/docker-entrypoint-initdb.d/20-data.sql
     ports:
       - "5432:5432"
     networks:
       - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
-  
-  # PgAdmin (Gestor de DB)
-  pgadmin:
+
+  pgadmin: # INTERFAZ PARA ADMIN DE LA BD.
     image: dpage/pgadmin4
     container_name: pgadmin
     user: root
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@tpi.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
     volumes:
@@ -64,20 +66,20 @@ services:
     networks:
       - backend-net
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
-    
-  # Keycloak (Servidor de Seguridad)
-  keycloak:
+
+  keycloak: # Autenticación y Autorización
     image: quay.io/keycloak/keycloak:23.0.7
     container_name: keycloak
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/tpi_db
-      KC_DB_USERNAME: user
-      KC_DB_PASSWORD: password
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
       KC_HOSTNAME: localhost
       KC_HOSTNAME_PORT: 9090
       KC_HOSTNAME_STRICT: "false"
@@ -88,17 +90,14 @@ services:
     volumes:
       - ./config/keycloak/tpi-realm-realm.json:/opt/keycloak/data/import/tpi-realm-realm.json
     ports:
-      - "9090:8080" # Puerto para acceder a la UI de Keycloak
+      - "9090:8080"
     networks:
       - backend-net
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
-  # ====================================================================================================================
-  # 💻 MICROSERVICIOS (Eureka Clients)
-  # ====================================================================================================================
-    # API Gateway
   api-gateway:
     build:
       context: ./api-gateway
@@ -113,27 +112,30 @@ services:
     networks:
       - backend-net
     depends_on:
-      - eureka-server
-      - keycloak
+      eureka-server:
+        condition: service_started
+      keycloak:
+        condition: service_started
 
-  # ====================================================================================================================
-  # 🚀 MICROSERVICIOS V2 (Nueva Arquitectura con Bounded Contexts)
-  # ====================================================================================================================
-
-  # Microservicio Solicitudes V2 (Clientes + Solicitudes + Contenedores)
-  ms-solicitudes-v2:
+  ms-solicitudes:
     build:
-      context: ./ms-solicitudes-v2
+      context: ./ms-solicitudes
       dockerfile: Dockerfile
-    container_name: ms-solicitudes-v2
+    container_name: ms-solicitudes
     ports:
       - "8091:8091"
     environment:
-      SPRING_APPLICATION_NAME: MS-SOLICITUDES-V2
+      SPRING_APPLICATION_NAME: MS-SOLICITUDES
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tpi_db
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Flyway / Hibernate settings
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_ENABLED: 'true'
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration/ms_solicitudes
+      SPRING_FLYWAY_SCHEMAS: ms_solicitudes
+      SPRING_FLYWAY_CREATE_SCHEMAS: 'true'
     networks:
       - backend-net
     depends_on:
@@ -142,7 +144,6 @@ services:
       eureka-server:
         condition: service_started
 
-  # Microservicio Logística V2 (Transportistas + Camiones + Depósitos + Tramos)
   ms-logistica:
     build:
       context: ./ms-logistica
@@ -153,55 +154,76 @@ services:
     environment:
       SPRING_APPLICATION_NAME: MS-LOGISTICA
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tpi_db
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-      GOOGLE_MAPS_API_KEY: AIzaSyBzEIPhIq9sjktQSXUGi10qhJkp3blmb20
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Flyway / Hibernate settings
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_ENABLED: 'true'
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration/ms_logistica
+      SPRING_FLYWAY_SCHEMAS: ms_logistica
+      SPRING_FLYWAY_CREATE_SCHEMAS: 'true'
     networks:
       - backend-net
     depends_on:
-      - postgres
-      - eureka-server
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
 
-  # Microservicio Facturación V2 (Tarifas + Facturas + Estadías)
-  ms-facturacion-v2:
+  ms-facturacion:
     build:
-      context: ./ms-facturacion-v2
+      context: ./ms-facturacion
       dockerfile: Dockerfile
-    container_name: ms-facturacion-v2
+    container_name: ms-facturacion
     ports:
       - "8093:8093"
     environment:
-      SPRING_APPLICATION_NAME: MS-FACTURACION-V2
+      SPRING_APPLICATION_NAME: MS-FACTURACION
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tpi_db
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Flyway / Hibernate settings
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_ENABLED: 'true'
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration/ms_facturacion
+      SPRING_FLYWAY_SCHEMAS: ms_facturacion
+      SPRING_FLYWAY_CREATE_SCHEMAS: 'true'
     networks:
       - backend-net
     depends_on:
-      - postgres
-      - eureka-server
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
 
-  # Microservicio Tracking V2 (Eventos de Seguimiento)
-  ms-tracking-v2:
+  ms-tracking:
     build:
-      context: ./ms-tracking-v2
+      context: ./ms-tracking
       dockerfile: Dockerfile
-    container_name: ms-tracking-v2
+    container_name: ms-tracking
     ports:
       - "8094:8094"
     environment:
-      SPRING_APPLICATION_NAME: MS-TRACKING-V2
+      SPRING_APPLICATION_NAME: MS-TRACKING
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tpi_db
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Flyway / Hibernate settings
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_ENABLED: 'true'
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration/ms_tracking
+      SPRING_FLYWAY_SCHEMAS: ms_tracking
+      SPRING_FLYWAY_CREATE_SCHEMAS: 'true'
     networks:
       - backend-net
     depends_on:
-      - postgres
-      - eureka-server
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
 
 volumes:
   pgadmin-data:

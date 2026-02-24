@@ -3,6 +3,7 @@ package com.tpi.solicitudes.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,9 +14,14 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Verificar si ya hay datos
-        Integer clientesCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM v2_clientes", Integer.class);
-        
+        // Verificar si ya hay datos (protegido contra tablas aún no creadas)
+        Integer clientesCount = null;
+        try {
+            clientesCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM v2_clientes", Integer.class);
+        } catch (DataAccessException ex) {
+            System.out.println("⚠️ Tabla v2_clientes no disponible todavía, omitiendo carga inicial de Solicitudes");
+        }
+
         if (clientesCount != null && clientesCount == 0) {
             System.out.println("🔄 Cargando datos iniciales de Solicitudes...");
             

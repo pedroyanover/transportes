@@ -1,0 +1,4 @@
+com\tpi\gateway\api_gateway\ApiGatewayApplication.class
+com\tpi\gateway\api_gateway\config\GatewayRouteConfig.class
+com\tpi\gateway\api_gateway\config\SecurityConfig.class
+com\tpi\gateway\api_gateway\config\SecurityConfig$KeycloakJwtGrantedAuthoritiesConverter.class

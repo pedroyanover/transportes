@@ -1,0 +1,11 @@
+com\tpi\tracking\entity\TrackingEvento$TrackingEventoBuilder.class
+com\tpi\tracking\config\JacksonConfig.class
+com\tpi\tracking\repository\TrackingEventoRepository.class
+com\tpi\tracking\dto\TrackingEventoDTO$TrackingEventoDTOBuilder.class
+com\tpi\tracking\dto\RegistrarEventoRequest$RegistrarEventoRequestBuilder.class
+com\tpi\tracking\dto\RegistrarEventoRequest.class
+com\tpi\tracking\TrackingApplication.class
+com\tpi\tracking\service\TrackingService.class
+com\tpi\tracking\controller\TrackingController.class
+com\tpi\tracking\entity\TrackingEvento.class
+com\tpi\tracking\dto\TrackingEventoDTO.class
