@@ -12,7 +12,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @EnableFeignClients
 @OpenAPIDefinition(
     info = @Info(
-        title = "MS-Facturacion-V2 API",
+        title = "MS-Facturacion API",
         version = "1.0.0",
         description = "Microservicio de Facturación - Gestión de tarifas, facturas y estadías en depósito"
     )

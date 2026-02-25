@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "v2_facturas")
+@Table(name = "facturas")
 @Data
 @Builder
 @NoArgsConstructor
@@ -26,7 +26,6 @@ public class Factura {
     @Column(name = "numero_factura", nullable = false, unique = true, length = 50)
     private String numeroFactura;
     
-    // Desglose de costos
     @Column(name = "cargo_gestion", nullable = false)
     private Double cargoGestion;
     
@@ -39,7 +38,6 @@ public class Factura {
     @Column(name = "costo_estadias", nullable = false)
     private Double costoEstadias = 0.0;
     
-    // Totales
     @Column(name = "subtotal", nullable = false)
     private Double subtotal;
     

@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "v2_tarifas")
+@Table(name = "tarifas")
 @Data
 @Builder
 @NoArgsConstructor
