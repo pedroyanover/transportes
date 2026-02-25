@@ -1,0 +1,144 @@
+# .gitignore - Proyecto Tp-backend-
+# Reglas generales para Java/Maven, Docker, IDEs, SO y datos locales
+
+############################
+# Sistema y editor
+############################
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+Icon?
+*~
+*.swp
+
+############################
+# Java / Maven
+############################
+**/target/
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.class
+
+# Maven wrapper (binarios generados si no se versionan)
+.mvn/wrapper/maven-wrapper.jar
+
+# Maven build output and generated sources
+generated-sources/
+generated-test-sources/
+
+############################
+# IDEs
+############################
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# VSCode
+.vscode/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+
+############################
+# Docker and local containers
+############################
+# Docker compose overrides and envs
+docker-compose.override.yml
+docker-compose.*.yml
+*.env
+.env.*
+
+# Postgres data directory used in this repo
+/transportes/pgdata/
+pgdata/
+
+# Docker artifacts
+*.pid
+*.log
+
+############################
+# Logs, temp, caches
+############################
+logs/
+*.log
+*.tmp
+*.temp
+tmp/
+temp/
+cache/
+*.cache
+
+############################
+# Node / frontend (if present)
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+
+############################
+# Python (if present)
+############################
+venv/
+env/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+############################
+# Test / coverage
+############################
+coverage/
+.coverage
+.pytest_cache/
+test-output/
+surefire-reports/
+
+############################
+# Secrets / keys
+############################
+secrets.yml
+*.jks
+*.keystore
+*.pem
+*.p12
+*.crt
+*.key
+
+############################
+# OS or editor swap / backup
+############################
+*.orig
+*.rej
+
+############################
+# Other common ignores
+############################
+*.log
+*.bak
+*.backup
+release/
+.history/
