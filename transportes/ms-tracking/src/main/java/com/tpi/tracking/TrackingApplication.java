@@ -12,7 +12,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @EnableFeignClients
 @OpenAPIDefinition(
     info = @Info(
-        title = "MS-Tracking-V2 API",
+        title = "MS-Tracking API",
         version = "1.0.0",
         description = "Microservicio de Tracking - Registro y consulta de eventos de seguimiento"
     )
