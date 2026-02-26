@@ -55,8 +55,8 @@ public class SolicitudService {
         Solicitud guardada = solicitudRepository.save(solicitud);
         log.info("Solicitud creada con ID: {}", guardada.getId());
         
-        // Integración con ms-logistica: calcular rutas automáticamente
-        List<RutaTentativaDTO> rutasCalculadas = null;
+        // Integración con ms-logistica: calcular todas las rutas tentativas según distancias
+        List<RutaDTO> rutasCalculadas = null;
         try {
             rutasCalculadas = logisticaClient.calcularRutasTentativas(
                 guardada.getId(),
@@ -66,28 +66,29 @@ public class SolicitudService {
                 request.getContenedor().getVolumenM3()
             );
             
-            // Usar la ruta DIRECTA (más simple) para estimaciones iniciales en la solicitud
+            // Si se generaron opciones, utilizar la más económica para el estimado
             if (rutasCalculadas != null && !rutasCalculadas.isEmpty()) {
-                RutaTentativaDTO rutaDirecta = rutasCalculadas.stream()
-                        .filter(r -> "DIRECTA".equals(r.getEstrategia()))
-                        .findFirst()
-                        .orElse(rutasCalculadas.get(0)); // Fallback a primera ruta
+                RutaDTO mejorRuta = rutasCalculadas.stream()
+                        .min(java.util.Comparator.comparing(RutaDTO::getCostoTotalEstimado))
+                        .orElse(rutasCalculadas.get(0));
                 
-                guardada.setCostoEstimado(rutaDirecta.getCostoTotalEstimado());
-                guardada.setTiempoEstimadoHoras(rutaDirecta.getTiempoEstimadoHoras());
+                guardada.setCostoEstimado(mejorRuta.getCostoTotalEstimado());
+                guardada.setTiempoEstimadoHoras(mejorRuta.getTiempoEstimadoHoras());
                 guardada = solicitudRepository.save(guardada);
                 
-                log.info("✅ {} rutas calculadas para solicitud {}. Ruta directa: {}km, ${}, {}hs", 
+                log.info("✅ {} rutas calculadas para solicitud {}. Mejor opción: {} ({}km, ${}, {}hs)", 
                         rutasCalculadas.size(), guardada.getId(), 
-                        rutaDirecta.getDistanciaTotal(), 
-                        rutaDirecta.getCostoTotalEstimado(), 
-                        rutaDirecta.getTiempoEstimadoHoras());
+                        mejorRuta.getEstrategia(), 
+                        mejorRuta.getDistanciaTotal(), 
+                        mejorRuta.getCostoTotalEstimado(), 
+                        mejorRuta.getTiempoEstimadoHoras());
             }
         } catch (Exception e) {
-            log.warn("No se pudo calcular ruta automáticamente para solicitud {}: {}", 
+            log.warn("No se pudo calcular rutas automáticamente para solicitud {}: {}", 
                     guardada.getId(), e.getMessage());
         }
         
+        // devolver la solicitud junto a todas las rutas creadas
         return convertirASolicitudDTO(guardada, rutasCalculadas);
     }
     
@@ -400,7 +401,7 @@ public class SolicitudService {
         return convertirASolicitudDTO(s, null);
     }
     
-    private SolicitudDTO convertirASolicitudDTO(Solicitud s, List<RutaTentativaDTO> rutasTentativas) {
+    private SolicitudDTO convertirASolicitudDTO(Solicitud s, List<RutaDTO> rutasTentativas) {
         // Obtener datos del contenedor si existe
         ContenedorDTO contenedorDTO = null;
         if (s.getContenedorId() != null) {
@@ -458,7 +459,7 @@ public class SolicitudService {
     /**
      * Obtiene todas las rutas calculadas para una solicitud
      */
-    public List<RutaTentativaDTO> obtenerRutasSolicitud(Long solicitudId) {
+    public List<RutaDTO> obtenerRutasSolicitud(Long solicitudId) {
         log.info("Obteniendo rutas para solicitud {}", solicitudId);
         
         // Verificar que la solicitud existe

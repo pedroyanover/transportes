@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "MS-SOLICITUDES-V2")
+@FeignClient(name = "MS-SOLICITUDES")
 public interface SolicitudClient {
     
     @GetMapping("/api/solicitudes/{id}")

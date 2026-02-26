@@ -3,11 +3,9 @@ com\tpi\solicitudes\entity\Cliente$ClienteBuilder.class
 com\tpi\solicitudes\client\FacturaDTO.class
 com\tpi\solicitudes\dto\SolicitudDTO.class
 com\tpi\solicitudes\dto\ClienteDTO.class
-com\tpi\solicitudes\client\RutaTentativaDTO$RutaTentativaDTOBuilder.class
 com\tpi\solicitudes\client\TarifaDTO.class
 com\tpi\solicitudes\dto\CrearSolicitudRequest$ContenedorSimpleDTO.class
 com\tpi\solicitudes\controller\SolicitudController.class
-com\tpi\solicitudes\client\RutaTentativaDTO.class
 com\tpi\solicitudes\client\FacturaDTO$FacturaDTOBuilder.class
 com\tpi\solicitudes\dto\CrearSolicitudRequest$CrearSolicitudRequestBuilder.class
 com\tpi\solicitudes\client\TramoDTO$TramoDTOBuilder.class

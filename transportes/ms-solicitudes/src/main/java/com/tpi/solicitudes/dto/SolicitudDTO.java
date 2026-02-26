@@ -1,6 +1,6 @@
 package com.tpi.solicitudes.dto;
 
-import com.tpi.solicitudes.client.RutaTentativaDTO;
+import com.tpi.solicitudes.client.RutaDTO;
 import lombok.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
@@ -34,6 +34,6 @@ public class SolicitudDTO {
     // Datos del contenedor (para validaciones de capacidad)
     private ContenedorDTO contenedor;
     
-    // Rutas tentativas calculadas (se incluyen al crear la solicitud)
-    private List<RutaTentativaDTO> rutasTentativas;
+    // Rutas calculadas (opciones) para la solicitud
+    private List<RutaDTO> rutasTentativas;
 }

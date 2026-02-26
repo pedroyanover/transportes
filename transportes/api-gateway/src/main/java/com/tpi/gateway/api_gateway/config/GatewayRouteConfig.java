@@ -14,7 +14,7 @@ public class GatewayRouteConfig {
             
             // SOLICITUDES: /api/solicitudes/** → /api/solicitudes/** (sin cambios)
             .route("solicitudes_route", r -> r.path("/api/solicitudes/**")
-                .uri("lb://MS-SOLICITUDES-V2"))
+                .uri("lb://MS-SOLICITUDES"))
             
             // LOGISTICA: /api/logistica/** → /api/** (reescribe quitando /logistica)
             .route("logistica_route", r -> r.path("/api/logistica/**")
@@ -24,12 +24,12 @@ public class GatewayRouteConfig {
             // TRACKING: /api/tracking/** → /api/** (reescribe quitando /tracking)
             .route("tracking_route", r -> r.path("/api/tracking/**")
                 .filters(f -> f.rewritePath("/api/tracking/(?<segment>.*)", "/api/${segment}"))
-                .uri("lb://MS-TRACKING-V2"))
+                .uri("lb://MS-TRACKING"))
             
             // FACTURACION: /api/facturacion/** → /api/** (reescribe quitando /facturacion)
             .route("facturacion_route", r -> r.path("/api/facturacion/**")
                 .filters(f -> f.rewritePath("/api/facturacion/(?<segment>.*)", "/api/${segment}"))
-                .uri("lb://MS-FACTURACION-V2"))
+                .uri("lb://MS-FACTURACION"))
             
             .build();
     }

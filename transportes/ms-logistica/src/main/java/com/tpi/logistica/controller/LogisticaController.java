@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,23 +20,6 @@ public class LogisticaController {
     
     private final LogisticaService logisticaService;
     
-    @PostMapping("/rutas/calcular")
-    @Operation(summary = "Calcular rutas tentativas", 
-               description = "Calcula rutas posibles para una solicitud usando Google Maps API")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Rutas calculadas exitosamente"),
-        @ApiResponse(responseCode = "400", description = "Parámetros inválidos")
-    })
-    public ResponseEntity<RutaTentativaDTO> calcularRutas(
-            @Parameter(description = "ID de la solicitud") @RequestParam Long solicitudId,
-            @Parameter(description = "Dirección de origen completa") @RequestParam String origenDireccion,
-            @Parameter(description = "Dirección de destino completa") @RequestParam String destinoDireccion) {
-        
-        RutaTentativaDTO ruta = logisticaService.calcularRutasTentativas(
-                solicitudId, origenDireccion, destinoDireccion);
-        
-        return ResponseEntity.ok(ruta);
-    }
     
     @PostMapping("/tramos/crear")
     @Operation(summary = "Crear tramos para una solicitud",

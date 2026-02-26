@@ -15,7 +15,7 @@ public interface LogisticaClient {
      * Devuelve lista con estrategias: DIRECTA, UN_DEPOSITO, MULTIPLES_DEPOSITOS
      */
     @GetMapping("/api/rutas/tentativas/{solicitudId}")
-    List<RutaTentativaDTO> calcularRutasTentativas(
+    List<RutaDTO> calcularRutasTentativas(
             @PathVariable Long solicitudId,
             @RequestParam String origenDireccion,
             @RequestParam String destinoDireccion,
@@ -33,5 +33,5 @@ public interface LogisticaClient {
      * Lista todas las rutas de una solicitud (tentativas, asignadas, canceladas)
      */
     @GetMapping("/api/rutas/solicitud/{solicitudId}")
-    List<RutaTentativaDTO> listarRutasPorSolicitud(@PathVariable Long solicitudId);
+    List<RutaDTO> listarRutasPorSolicitud(@PathVariable Long solicitudId);
 }

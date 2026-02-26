@@ -14,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class RutaTentativaDTO {
+public class RutaDTO {
     private Long id;
     private Long solicitudId;
     private String estado;

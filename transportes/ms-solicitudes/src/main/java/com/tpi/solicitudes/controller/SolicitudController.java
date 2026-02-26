@@ -2,7 +2,7 @@ package com.tpi.solicitudes.controller;
 
 import com.tpi.solicitudes.dto.*;
 import com.tpi.solicitudes.client.FacturaDTO;
-import com.tpi.solicitudes.client.RutaTentativaDTO;
+import com.tpi.solicitudes.client.RutaDTO;
 import com.tpi.solicitudes.service.SolicitudService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -235,9 +235,9 @@ public class SolicitudController {
         @ApiResponse(responseCode = "200", description = "Rutas encontradas"),
         @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
-    public ResponseEntity<List<RutaTentativaDTO>> obtenerRutasSolicitud(
+    public ResponseEntity<List<RutaDTO>> obtenerRutasSolicitud(
             @Parameter(description = "ID de la solicitud") @PathVariable Long id) {
-        List<RutaTentativaDTO> rutas = solicitudService.obtenerRutasSolicitud(id);
+        List<RutaDTO> rutas = solicitudService.obtenerRutasSolicitud(id);
         return ResponseEntity.ok(rutas);
     }
 }

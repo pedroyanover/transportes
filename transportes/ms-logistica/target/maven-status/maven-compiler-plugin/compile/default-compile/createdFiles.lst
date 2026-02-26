@@ -47,7 +47,6 @@ com\tpi\logistica\dto\TramoDTO.class
 com\tpi\logistica\dto\googlemaps\Distance.class
 com\tpi\logistica\dto\RutaDTO.class
 com\tpi\logistica\repository\DepositoRepository.class
-com\tpi\logistica\dto\RutaTentativaDTO.class
 com\tpi\logistica\client\SolicitudDTO$ContenedorDTO$ContenedorDTOBuilder.class
 com\tpi\logistica\entity\Ruta$RutaBuilder.class
 com\tpi\logistica\service\GoogleMapsService$Row.class
@@ -57,7 +56,6 @@ com\tpi\logistica\dto\googlemaps\Duration.class
 com\tpi\logistica\client\FacturaDTO$FacturaDTOBuilder.class
 com\tpi\logistica\dto\CamionDTO.class
 com\tpi\logistica\entity\Camion$CamionBuilder.class
-com\tpi\logistica\dto\RutaTentativaDTO$RutaTentativaDTOBuilder.class
 com\tpi\logistica\dto\AsignarCamionRequest$AsignarCamionRequestBuilder.class
 com\tpi\logistica\entity\Deposito$DepositoBuilder.class
 com\tpi\logistica\client\FacturaDTO.class

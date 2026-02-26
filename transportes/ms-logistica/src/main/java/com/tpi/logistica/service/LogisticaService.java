@@ -35,67 +35,6 @@ public class LogisticaService {
     // Mapa para rastrear estadías activas por contenedor
     private final Map<Long, Long> estadiasActivas = new HashMap<>();
     
-    /**
-     * Calcula rutas tentativas para una solicitud
-     * Por ahora genera ruta DIRECTA (sin depósitos intermedios)
-     * TODO: Implementar lógica para rutas con depósitos según distancia
-     */
-    public RutaTentativaDTO calcularRutasTentativas(Long solicitudId, 
-                                                     String origenDireccion, 
-                                                     String destinoDireccion) {
-        log.info("Calculando rutas tentativas para solicitud ID: {}", solicitudId);
-        log.info("Origen: {} | Destino: {}", origenDireccion, destinoDireccion);
-        
-        // Calcular distancia directa usando direcciones
-        Double distancia = googleMapsService.calcularDistancia(origenDireccion, destinoDireccion);
-        
-        if (distancia == null) {
-            log.warn("No se pudo calcular la distancia real. Usando estimación aproximada de 700km");
-            distancia = 700.0; // Distancia promedio aproximada para rutas largas en Argentina
-        }
-        
-        Double tiempo = googleMapsService.calcularTiempoEstimado(distancia);
-        
-        // Crear tramo directo (sin guardar aún)
-        TramoDTO tramoDirecto = TramoDTO.builder()
-                .solicitudId(solicitudId)
-                .origenTipo("CLIENTE")
-                .origenDireccion(origenDireccion)
-                .destinoTipo("CLIENTE")
-                .destinoDireccion(destinoDireccion)
-                .tipoTramo("DIRECTO")
-                .distanciaKm(distancia)
-                .ordenTramo(1)
-                .estado("ESTIMADO")
-                .build();
-        
-        List<TramoDTO> tramos = new ArrayList<>();
-        tramos.add(tramoDirecto);
-        
-        // Estimar costo usando tarifa vigente
-        Double costoEstimado = 0.0;
-        try {
-            com.tpi.logistica.client.TarifaDTO tarifa = facturacionClient.obtenerTarifaVigente();
-            if (tarifa != null) {
-                costoEstimado = distancia * (tarifa.getCargoGestionBase() / 10.0);
-                log.info("💰 Costo estimado calculado con tarifa vigente: ${}", costoEstimado);
-            } else {
-                costoEstimado = distancia * 150.0; // Fallback
-            }
-        } catch (Exception e) {
-            log.warn("⚠️ No se pudo obtener tarifa vigente, usando costo por defecto: ${}", distancia * 150.0);
-            costoEstimado = distancia * 150.0;
-        }
-        
-        return RutaTentativaDTO.builder()
-                .solicitudId(solicitudId)
-                .tramos(tramos)
-                .distanciaTotal(distancia)
-                .costoEstimadoTransporte(costoEstimado)
-                .tiempoEstimadoHoras(tiempo)
-                .estrategia("DIRECTA")
-                .build();
-    }
     
     /**
      * Crea los tramos en la BD para una solicitud

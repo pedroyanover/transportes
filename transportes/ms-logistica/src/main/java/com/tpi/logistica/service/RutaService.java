@@ -29,8 +29,11 @@ public class RutaService {
     private final FacturacionClient facturacionClient;
     
     /**
-     * Calcula múltiples rutas tentativas para que el operador elija
-     * Genera 3 opciones: DIRECTA, UN_DEPOSITO, MULTIPLES_DEPOSITOS
+     * Calcula múltiples rutas tentativas para que el operador elija.
+     * Genera 2-3 opciones según la distancia:
+     * - < 500km: Solo ruta directa (1 tramo)
+     * - 500-1000km: Ruta directa + Ruta con 1 depósito (2 tramos)
+     * - > 1000km: Ruta directa + Ruta con 1 depósito + Ruta con 2 depósitos (3 tramos)
      */
     public List<RutaDTO> calcularRutasTentativas(Long solicitudId,
                                                    String origenDireccion,
@@ -41,51 +44,52 @@ public class RutaService {
         
         List<RutaDTO> rutasTentativas = new ArrayList<>();
         
-        // 1. RUTA DIRECTA (siempre se calcula)
+        // 1. CALCULAR DISTANCIA DIRECTA
         RutaDTO rutaDirecta = calcularRutaDirecta(solicitudId, origenDireccion, destinoDireccion);
         if (rutaDirecta != null) {
             rutasTentativas.add(rutaDirecta);
-            log.info("✅ Ruta directa: {}km, ${}, {}hs", 
+            log.info("✅ Opción 1 - Ruta DIRECTA: {}km, ${}, {}hs", 
                     rutaDirecta.getDistanciaTotal(), 
                     rutaDirecta.getCostoTotalEstimado(), 
                     rutaDirecta.getTiempoEstimadoHoras());
         }
         
-        // 2. DETERMINAR ESTRATEGIA SEGÚN DISTANCIA
+        // 2. DETERMINAR OPCIONES ADICIONALES SEGÚN DISTANCIA
         Double distanciaDirecta = rutaDirecta != null ? rutaDirecta.getDistanciaTotal() : 0;
         
-        if (distanciaDirecta > 500 && distanciaDirecta <= 1000) {
-            // 500-1000km: 1 DEPÓSITO
-            log.info("📍 Distancia {}km → Estrategia: 1 DEPÓSITO", distanciaDirecta);
+        if (distanciaDirecta >= 500 && distanciaDirecta <= 1000) {
+            // 500-1000km: Añadir opción con 1 depósito (2 tramos)
+            log.info("📍 Distancia {}km → Generando opciones: DIRECTA + 1 DEPÓSITO", distanciaDirecta);
             RutaDTO rutaConDeposito = calcularRutaConDepositos(solicitudId, origenDireccion, destinoDireccion, 1);
             if (rutaConDeposito != null) {
                 rutasTentativas.add(rutaConDeposito);
-                log.info("✅ Ruta con 1 depósito: {}km, ${}, {}hs", 
+                log.info("✅ Opción 2 - Ruta con 1 DEPÓSITO (2 tramos): {}km, ${}, {}hs", 
                         rutaConDeposito.getDistanciaTotal(), 
                         rutaConDeposito.getCostoTotalEstimado(), 
                         rutaConDeposito.getTiempoEstimadoHoras());
             }
-        } else if (distanciaDirecta > 1000 && distanciaDirecta <= 1500) {
-            // 1000-1500km: 2 DEPÓSITOS
-            log.info("📍 Distancia {}km → Estrategia: 2 DEPÓSITOS", distanciaDirecta);
+        } else if (distanciaDirecta > 1000) {
+            // > 1000km: Añadir opciones con 1 y 2 depósitos
+            log.info("📍 Distancia {}km → Generando opciones: DIRECTA + 1 DEPÓSITO + 2 DEPÓSITOS", distanciaDirecta);
+            
+            // Opción con 1 depósito (2 tramos)
+            RutaDTO rutaConDeposito = calcularRutaConDepositos(solicitudId, origenDireccion, destinoDireccion, 1);
+            if (rutaConDeposito != null) {
+                rutasTentativas.add(rutaConDeposito);
+                log.info("✅ Opción 2 - Ruta con 1 DEPÓSITO (2 tramos): {}km, ${}, {}hs", 
+                        rutaConDeposito.getDistanciaTotal(), 
+                        rutaConDeposito.getCostoTotalEstimado(), 
+                        rutaConDeposito.getTiempoEstimadoHoras());
+            }
+            
+            // Opción con 2 depósitos (3 tramos)
             RutaDTO rutaCon2Depositos = calcularRutaConDepositos(solicitudId, origenDireccion, destinoDireccion, 2);
             if (rutaCon2Depositos != null) {
                 rutasTentativas.add(rutaCon2Depositos);
-                log.info("✅ Ruta con 2 depósitos: {}km, ${}, {}hs", 
+                log.info("✅ Opción 3 - Ruta con 2 DEPÓSITOS (3 tramos): {}km, ${}, {}hs", 
                         rutaCon2Depositos.getDistanciaTotal(), 
                         rutaCon2Depositos.getCostoTotalEstimado(), 
                         rutaCon2Depositos.getTiempoEstimadoHoras());
-            }
-        } else if (distanciaDirecta > 1500) {
-            // +1500km: 3 DEPÓSITOS
-            log.info("📍 Distancia {}km → Estrategia: 3 DEPÓSITOS", distanciaDirecta);
-            RutaDTO rutaCon3Depositos = calcularRutaConDepositos(solicitudId, origenDireccion, destinoDireccion, 3);
-            if (rutaCon3Depositos != null) {
-                rutasTentativas.add(rutaCon3Depositos);
-                log.info("✅ Ruta con 3 depósitos: {}km, ${}, {}hs", 
-                        rutaCon3Depositos.getDistanciaTotal(), 
-                        rutaCon3Depositos.getCostoTotalEstimado(), 
-                        rutaCon3Depositos.getTiempoEstimadoHoras());
             }
         }
         

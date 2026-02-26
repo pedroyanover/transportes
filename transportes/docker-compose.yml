@@ -123,7 +123,7 @@ services:
     environment:
       SPRING_APPLICATION_NAME: MS-SOLICITUDES
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-transportes_db}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-transportes_db}?currentSchema=ms_solicitudes
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       # Flyway / Hibernate settings
@@ -132,6 +132,8 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration/ms_solicitudes
       SPRING_FLYWAY_SCHEMAS: ms_solicitudes
       SPRING_FLYWAY_CREATE_SCHEMAS: 'true'
+      # default schema for Hibernate
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: ms_solicitudes
     networks:
       - backend-net
     depends_on:
@@ -150,7 +152,7 @@ services:
     environment:
       SPRING_APPLICATION_NAME: MS-LOGISTICA
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-transportes_db}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-transportes_db}?currentSchema=ms_logistica
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
@@ -158,6 +160,8 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_JPA_SHOW_SQL: 'false'
       SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: 'true'
+      # ensure Hibernate validates against the correct schema
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: ms_logistica
     networks:
       - backend-net
     depends_on:
@@ -176,7 +180,7 @@ services:
     environment:
       SPRING_APPLICATION_NAME: MS-FACTURACION
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-transportes_db}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-transportes_db}?currentSchema=ms_facturacion
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       # Flyway / Hibernate settings
@@ -185,6 +189,8 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration/ms_facturacion
       SPRING_FLYWAY_SCHEMAS: ms_facturacion
       SPRING_FLYWAY_CREATE_SCHEMAS: 'true'
+      # default schema for Hibernate
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: ms_facturacion
     networks:
       - backend-net
     depends_on:
