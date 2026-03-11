@@ -1,10 +1,7 @@
-FROM maven:3.9.4-eclipse-temurin-21 AS builder
-WORKDIR /workspace
-COPY . .
-RUN mvn -B -DskipTests package
-
+# Usamos el jar ya compilado localmente para evitar descargar dependencias en el build.
+# Asegurarse de ejecutar `./mvnw -DskipTests package` antes de build.
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=builder /workspace/target/*.jar app.jar
+COPY target/ms-logistica-1.0.0.jar app.jar
 EXPOSE 8092
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -2,6 +2,7 @@ package com.tpi.logistica.service;
 
 import com.tpi.logistica.client.FacturacionClient;
 import com.tpi.logistica.client.FacturaDTO;
+import com.tpi.logistica.client.TrackingClient;
 import com.tpi.logistica.client.SolicitudClient;
 import com.tpi.logistica.client.SolicitudDTO;
 import com.tpi.logistica.dto.*;
@@ -31,11 +32,35 @@ public class LogisticaService {
     private final GoogleMapsService googleMapsService;
     private final SolicitudClient solicitudClient;
     private final FacturacionClient facturacionClient;
-    
+    private final TrackingClient trackingClient;
+
     // Mapa para rastrear estadías activas por contenedor
     private final Map<Long, Long> estadiasActivas = new HashMap<>();
-    
-    
+
+    /**
+     * Registra un evento en el microservicio de tracking.
+     */
+    private void registrarEventoTracking(Long solicitudId, Long tramoId, String tipoEvento, String descripcion) {
+        try {
+            SolicitudDTO solicitud = solicitudClient.obtenerSolicitud(solicitudId);
+            Long contenedorId = solicitud.getContenedor() != null ? solicitud.getContenedor().getId() : null;
+
+            RegistrarEventoRequest request = RegistrarEventoRequest.builder()
+                    .solicitudId(solicitudId)
+                    .tramoId(tramoId)
+                    .contenedorId(contenedorId)
+                    .tipoEvento(tipoEvento)
+                    .descripcion(descripcion)
+                    .build();
+
+            trackingClient.registrarEvento(request);
+            log.info("✅ Evento de tracking registrado: {} (solicitud={}, tramo={})", tipoEvento, solicitudId, tramoId);
+        } catch (Exception e) {
+            log.warn("No se pudo registrar evento de tracking ({}): {}", tipoEvento, e.getMessage());
+        }
+    }
+
+
     /**
      * Crea los tramos en la BD para una solicitud
      */
@@ -68,7 +93,10 @@ public class LogisticaService {
         
         Tramo guardado = tramoRepository.save(tramo);
         log.info("Tramo creado con ID: {} ({}km)", guardado.getId(), distancia);
-        
+
+        // Registrar evento de tracking: tramo creado
+        registrarEventoTracking(solicitudId, guardado.getId(), "CREADO", "Tramo creado para solicitud");
+
         List<TramoDTO> result = new ArrayList<>();
         result.add(convertirATramoDTO(guardado));
         return result;
@@ -156,7 +184,10 @@ public class LogisticaService {
         
         Tramo actualizado = tramoRepository.save(tramo);
         log.info("✅ Camión y transportista asignados exitosamente al tramo");
-        
+
+        // Registrar evento de tracking: asignación
+        registrarEventoTracking(tramo.getSolicitudId(), actualizado.getId(), "ASIGNADO", "Camión y transportista asignados");
+
         return convertirATramoDTO(actualizado);
     }
     
@@ -200,6 +231,9 @@ public class LogisticaService {
                         EstadiaResponseDTO estadia = facturacionClient.registrarSalidaDeposito(estadiaId);
                         log.info("✅ Estadía registrada: {} días | Costo: ${}", estadia.getDiasEstadia(), estadia.getCostoTotal());
                         estadiasActivas.remove(contenedorId);
+
+                        // Registrar evento de tracking: retirada del depósito
+                        registrarEventoTracking(tramo.getSolicitudId(), tramo.getId(), "RETIRADO", "Retirado del depósito " + tramo.getOrigenId());
                     } else {
                         log.warn("⚠️ No se encontró estadía activa para contenedor {}", contenedorId);
                     }
@@ -231,7 +265,10 @@ public class LogisticaService {
         }
         
         log.info("✅ Tramo iniciado. Estado: INICIADO");
-        
+
+        // Registrar evento de tracking: tramo en tránsito
+        registrarEventoTracking(tramo.getSolicitudId(), actualizado.getId(), "EN_TRANSITO", "Tramo iniciado y en tránsito");
+
         return convertirATramoDTO(actualizado);
     }
     
@@ -273,6 +310,13 @@ public class LogisticaService {
         
         Tramo actualizado = tramoRepository.save(tramo);
         log.info("✅ Tramo finalizado. Estado: FINALIZADO");
+
+        // Registrar evento de tracking: llegada a destino
+        if ("DEPOSITO".equals(tramo.getDestinoTipo())) {
+            registrarEventoTracking(tramo.getSolicitudId(), actualizado.getId(), "DEPOSITADO", "Llegó a depósito " + tramo.getDestinoId());
+        } else {
+            registrarEventoTracking(tramo.getSolicitudId(), actualizado.getId(), "ENTREGADO", "Llegó a destino final");
+        }
         
         // SI EL DESTINO ES DEPOSITO → Registrar ENTRADA de estadía
         if ("DEPOSITO".equals(tramo.getDestinoTipo()) && tramo.getDestinoId() != null) {

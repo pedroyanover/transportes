@@ -166,9 +166,10 @@ public class FacturacionService {
         // Consultar tramos
         List<TramoDTO> tramos = logisticaClient.listarTramosPorSolicitud(solicitudId);
         if (tramos.isEmpty()) {
-            throw new RuntimeException("No hay tramos para la solicitud ID: " + solicitudId);
+            log.warn("⚠️ No hay tramos para la solicitud ID: {}. Se generará factura usando el costo estimado.", solicitudId);
+        } else {
+            log.info("Tramos obtenidos: {} tramos", tramos.size());
         }
-        log.info("Tramos obtenidos: {} tramos", tramos.size());
         
         // Obtener tarifa vigente
         Tarifa tarifa = tarifaRepository.findTarifaVigente(LocalDate.now())
@@ -182,16 +183,22 @@ public class FacturacionService {
         
         // 2. Costo de Transporte = Σ(distancia_tramo × costo_km_camión)
         // Usa el costo/km real de cada camión asignado
-        Double costoTransporte = tramos.stream()
-                .mapToDouble(t -> {
-                    Double distancia = t.getDistanciaKm() != null ? t.getDistanciaKm() : 0.0;
-                    Double costoKm = t.getCostoKm() != null ? t.getCostoKm() : 0.0;
-                    double costo = distancia * costoKm;
-                    log.info("  Tramo {}: {} km × ${}/km = ${}", t.getOrdenTramo(), distancia, costoKm, costo);
-                    return costo;
-                })
-                .sum();
-        log.info("Costo de transporte TOTAL: ${} ({} tramos)", costoTransporte, tramos.size());
+        Double costoTransporte;
+        if (tramos.isEmpty()) {
+            costoTransporte = solicitud.getCostoEstimado() != null ? solicitud.getCostoEstimado() : 0.0;
+            log.info("No hay tramos: usando costo estimado de la solicitud como costo de transporte: ${}", costoTransporte);
+        } else {
+            costoTransporte = tramos.stream()
+                    .mapToDouble(t -> {
+                        Double distancia = t.getDistanciaKm() != null ? t.getDistanciaKm() : 0.0;
+                        Double costoKm = t.getCostoKm() != null ? t.getCostoKm() : 0.0;
+                        double costo = distancia * costoKm;
+                        log.info("  Tramo {}: {} km × ${}/km = ${}", t.getOrdenTramo(), distancia, costoKm, costo);
+                        return costo;
+                    })
+                    .sum();
+            log.info("Costo de transporte TOTAL: ${} ({} tramos)", costoTransporte, tramos.size());
+        }
         
         // 3. Costo de Combustible = Σ(distancia_tramo × consumo_camión × precio_litro)
         // Usa el consumo real de cada camión

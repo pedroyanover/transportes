@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "MS-FACTURACION-V2")
+@FeignClient(name = "MS-FACTURACION")
 public interface FacturacionClient {
     
     @GetMapping("/api/facturas/solicitud/{solicitudId}")

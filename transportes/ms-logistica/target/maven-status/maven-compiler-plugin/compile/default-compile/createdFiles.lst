@@ -3,8 +3,6 @@ com\tpi\logistica\config\DataInitializer.class
 com\tpi\logistica\entity\Deposito.class
 com\tpi\logistica\entity\Tramo$TramoBuilder.class
 com\tpi\logistica\repository\TramoRepository.class
-com\tpi\logistica\service\LogisticaService.class
-com\tpi\logistica\controller\LogisticaController.class
 com\tpi\logistica\entity\Tramo.class
 com\tpi\logistica\client\FacturacionClient.class
 com\tpi\logistica\client\SolicitudDTO$ContenedorDTO.class
@@ -39,6 +37,7 @@ com\tpi\logistica\repository\TransportistaRepository.class
 com\tpi\logistica\dto\AsignarCamionRequest.class
 com\tpi\logistica\dto\googlemaps\Location.class
 com\tpi\logistica\service\GoogleMapsService$Distance.class
+com\tpi\logistica\dto\RegistrarEventoRequest$RegistrarEventoRequestBuilder.class
 com\tpi\logistica\dto\RutaDTO$RutaDTOBuilder.class
 com\tpi\logistica\dto\TransportistaDTO.class
 com\tpi\logistica\dto\DepositoDTO$DepositoDTOBuilder.class
@@ -49,6 +48,7 @@ com\tpi\logistica\dto\RutaDTO.class
 com\tpi\logistica\repository\DepositoRepository.class
 com\tpi\logistica\client\SolicitudDTO$ContenedorDTO$ContenedorDTOBuilder.class
 com\tpi\logistica\entity\Ruta$RutaBuilder.class
+com\tpi\logistica\dto\RegistrarEventoRequest.class
 com\tpi\logistica\service\GoogleMapsService$Row.class
 com\tpi\logistica\client\TarifaDTO$TarifaDTOBuilder.class
 com\tpi\logistica\dto\googlemaps\OverviewPolyline.class

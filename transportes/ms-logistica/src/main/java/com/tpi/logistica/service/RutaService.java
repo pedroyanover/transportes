@@ -24,6 +24,8 @@ public class RutaService {
     private final RutaRepository rutaRepository;
     private final TramoRepository tramoRepository;
     private final DepositoRepository depositoRepository;
+    private final CamionRepository camionRepository;
+    private final TransportistaRepository transportistaRepository;
     private final GoogleMapsService googleMapsService;
     private final SolicitudClient solicitudClient;
     private final FacturacionClient facturacionClient;
@@ -151,6 +153,13 @@ public class RutaService {
      */
     private RutaDTO calcularRutaConDepositos(Long solicitudId, String origen, String destino, int cantidadDepositos) {
         List<Deposito> depositosActivos = depositoRepository.findByEstado("ACTIVO");
+        log.info("🔍 Depósitos activos encontrados: {} (se necesitan {})", depositosActivos.size(), cantidadDepositos);
+        
+        // Log de depósitos con coordenadas
+        depositosActivos.forEach(d -> 
+            log.debug("  - {}: lat={}, lon={}", d.getNombre(), d.getLat(), d.getLon())
+        );
+        
         if (depositosActivos.size() < cantidadDepositos) {
             log.warn("⚠️ No hay suficientes depósitos activos ({} requeridos, {} disponibles)", 
                     cantidadDepositos, depositosActivos.size());
@@ -276,11 +285,16 @@ public class RutaService {
         List<Deposito> depositosSeleccionados = new ArrayList<>();
         List<Deposito> depositosRestantes = new ArrayList<>(depositosDisponibles);
         
+        log.info("📊 Depósitos disponibles: {} total", depositosRestantes.size());
+        
         // Filtrar depósitos sin coordenadas
         depositosRestantes.removeIf(d -> d.getLat() == null || d.getLon() == null);
         
+        log.info("📊 Depósitos con coordenadas válidas: {}", depositosRestantes.size());
+        
         if (depositosRestantes.size() < cantidadDepositos) {
-            log.warn("⚠️ No hay suficientes depósitos con coordenadas válidas");
+            log.warn("⚠️ No hay suficientes depósitos con coordenadas válidas ({} requeridos, {} disponibles)", 
+                    cantidadDepositos, depositosRestantes.size());
             return null;
         }
         
@@ -289,12 +303,8 @@ public class RutaService {
         for (int i = 0; i < cantidadDepositos; i++) {
             Deposito mejorDeposito = null;
             Double mejorScore = Double.MAX_VALUE;
-            double distanciaActualADestino = calcularDistanciaHaversine(
-                    puntoActual[0], puntoActual[1],
-                    coordDestino[0], coordDestino[1]
-            );
-            
-            // Encontrar el depósito que ACERQUE al destino y minimice el desvío total
+
+            // Encontrar el depósito que minimice el desvío total (distancia al depósito + depósito al destino)
             for (Deposito deposito : depositosRestantes) {
                 double distanciaAlDeposito = calcularDistanciaHaversine(
                     puntoActual[0], puntoActual[1],
@@ -305,16 +315,11 @@ public class RutaService {
                     coordDestino[0], coordDestino[1]
                 );
                 
-                // Rechazar depósitos que no reduzcan la distancia al destino
-                if (distanciaDepositoADestino >= distanciaActualADestino) {
-                    log.debug("  ⚠️ Depósito {} descartado: aleja del destino ({}km -> {}km)",
-                            deposito.getNombre(), distanciaActualADestino, distanciaDepositoADestino);
-                    continue;
-                }
-                
                 // Score: camino actual->depósito + depósito->destino (preferimos menor desvío total)
                 double score = distanciaAlDeposito + distanciaDepositoADestino;
                 
+                // no descartamos automáticamente depósitos que "alejan" temporalmente del destino
+                // ya que en recorridos muy largos puede no existir ninguno que reduzca la distancia
                 if (score < mejorScore) {
                     mejorScore = score;
                     mejorDeposito = deposito;
@@ -612,5 +617,94 @@ public class RutaService {
                 .fechaCompletada(r.getFechaCompletada())
                 .observaciones(r.getObservaciones())
                 .build();
+    }
+    
+    /**
+     * Completa una ruta y libera los recursos asignados (camiones, transportistas)
+     */
+    public RutaDTO completarRuta(Long rutaId, Double costoReal, Double tiempoReal) {
+        log.info("🏁 Completando ruta {} con costo real: ${}, tiempo real: {}hs", rutaId, costoReal, tiempoReal);
+        
+        Ruta ruta = rutaRepository.findById(rutaId)
+                .orElseThrow(() -> new RuntimeException("Ruta no encontrada con ID: " + rutaId));
+        
+        if (!"ASIGNADA".equals(ruta.getEstado())) {
+            throw new IllegalStateException("Solo se pueden completar rutas en estado ASIGNADA");
+        }
+        
+        // Obtener todos los tramos de esta ruta para liberar recursos
+        List<Tramo> tramos = tramoRepository.findByRutaId(rutaId);
+        
+        // Liberar camiones y transportistas
+        for (Tramo tramo : tramos) {
+            if (tramo.getCamionId() != null) {
+                Camion camion = camionRepository.findById(tramo.getCamionId()).orElse(null);
+                if (camion != null && "EN_USO".equals(camion.getEstado())) {
+                    camion.setEstado("DISPONIBLE");
+                    camionRepository.save(camion);
+                    log.info("✅ Camión {} liberado a estado DISPONIBLE", camion.getId());
+                }
+            }
+            
+            if (tramo.getTransportistaId() != null) {
+                Transportista transportista = transportistaRepository.findById(tramo.getTransportistaId()).orElse(null);
+                if (transportista != null && "EN_RUTA".equals(transportista.getEstado())) {
+                    transportista.setEstado("DISPONIBLE");
+                    transportistaRepository.save(transportista);
+                    log.info("✅ Transportista {} liberado a estado DISPONIBLE", transportista.getId());
+                }
+            }
+        }
+        
+        // Marcar ruta como completada
+        ruta.setEstado("COMPLETADA");
+        ruta.setCostoTotalReal(costoReal);
+        ruta.setTiempoRealHoras(tiempoReal);
+        ruta.setFechaCompletada(LocalDateTime.now());
+        Ruta completada = rutaRepository.save(ruta);
+        
+        log.info("✅ Ruta {} completada. Recursos liberados.", rutaId);
+        return convertirARutaDTO(completada);
+    }
+    
+    /**
+     * Cancela una ruta y libera todos los recursos asignados
+     */
+    public RutaDTO cancelarRuta(Long rutaId, String razon) {
+        log.info("❌ Cancelando ruta {} - Razón: {}", rutaId, razon);
+        
+        Ruta ruta = rutaRepository.findById(rutaId)
+                .orElseThrow(() -> new RuntimeException("Ruta no encontrada con ID: " + rutaId));
+        
+        // Obtener todos los tramos de esta ruta para liberar recursos
+        List<Tramo> tramos = tramoRepository.findByRutaId(rutaId);
+        
+        // Liberar camiones y transportistas
+        for (Tramo tramo : tramos) {
+            if (tramo.getCamionId() != null) {
+                Camion camion = camionRepository.findById(tramo.getCamionId()).orElse(null);
+                if (camion != null) {
+                    camion.setEstado("DISPONIBLE");
+                    camionRepository.save(camion);
+                    log.info("✅ Camión {} liberado a estado DISPONIBLE (ruta cancelada)", camion.getId());
+                }
+            }
+            
+            if (tramo.getTransportistaId() != null) {
+                Transportista transportista = transportistaRepository.findById(tramo.getTransportistaId()).orElse(null);
+                if (transportista != null) {
+                    transportista.setEstado("DISPONIBLE");
+                    transportistaRepository.save(transportista);
+                    log.info("✅ Transportista {} liberado a estado DISPONIBLE (ruta cancelada)", transportista.getId());
+                }
+            }
+        }
+        
+        // Marcar ruta como cancelada
+        ruta.setEstado("CANCELADA");
+        Ruta cancelada = rutaRepository.save(ruta);
+        
+        log.info("✅ Ruta {} cancelada. Recursos liberados.", rutaId);
+        return convertirARutaDTO(cancelada);
     }
 }

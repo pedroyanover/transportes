@@ -12,6 +12,7 @@ public interface TramoRepository extends JpaRepository<Tramo, Long> {
     List<Tramo> findBySolicitudIdOrderByOrdenTramo(Long solicitudId);
     List<Tramo> findBySolicitudIdAndEstado(Long solicitudId, String estado);
     List<Tramo> findByCamionId(Long camionId);
+    List<Tramo> findByRutaId(Long rutaId);
     List<Tramo> findByEstado(String estado);
     
     @Query("SELECT t FROM Tramo t WHERE t.camionId = :camionId AND t.estado IN ('ASIGNADO', 'INICIADO')")

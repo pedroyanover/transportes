@@ -209,7 +209,7 @@ services:
     environment:
       SPRING_APPLICATION_NAME: MS-TRACKING
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-transportes_db}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-transportes_db}?currentSchema=ms_tracking
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       # Flyway / Hibernate settings
@@ -218,6 +218,8 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration/ms_tracking
       SPRING_FLYWAY_SCHEMAS: ms_tracking
       SPRING_FLYWAY_CREATE_SCHEMAS: 'true'
+      # default schema for Hibernate
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: ms_tracking
     networks:
       - backend-net
     depends_on:

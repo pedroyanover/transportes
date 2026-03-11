@@ -15,6 +15,7 @@ com\tpi\solicitudes\entity\Contenedor$ContenedorBuilder.class
 com\tpi\solicitudes\client\TarifaDTO$TarifaDTOBuilder.class
 com\tpi\solicitudes\service\SolicitudService.class
 com\tpi\solicitudes\entity\Solicitud.class
+com\tpi\solicitudes\client\RutaDTO.class
 com\tpi\solicitudes\dto\CrearSolicitudRequest.class
 com\tpi\solicitudes\repository\ContenedorRepository.class
 com\tpi\solicitudes\config\JacksonConfig.class
@@ -24,6 +25,7 @@ com\tpi\solicitudes\client\LogisticaClient.class
 com\tpi\solicitudes\dto\ContenedorDTO$ContenedorDTOBuilder.class
 com\tpi\solicitudes\repository\SolicitudRepository.class
 com\tpi\solicitudes\SolicitudesApplication.class
+com\tpi\solicitudes\client\RutaDTO$RutaDTOBuilder.class
 com\tpi\solicitudes\repository\ClienteRepository.class
 com\tpi\solicitudes\dto\ContenedorDTO.class
 com\tpi\solicitudes\entity\Contenedor.class

@@ -73,3 +73,10 @@ Preguntas abiertas / decisiones por tomar
 - ¿Deseas que Swagger UI esté protegido en `prod` por defecto (requiere configuración adicional)?
 
 Si quieres, genero un pequeño `CONTRIBUTING.md` o un arquetipo/maven archetype para nuevos microservicios con la configuración por defecto.
+
+
+
+ms-solicitudes: http://localhost:8091/swagger-ui.html
+ms-logistica: http://localhost:8092/swagger-ui.html
+ms-facturacion: http://localhost:8093/swagger-ui.html
+ms-tracking: http://localhost:8094/swagger-ui.html

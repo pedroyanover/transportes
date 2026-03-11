@@ -29,67 +29,82 @@ public class SolicitudService {
      * Incluye creación/validación de cliente y contenedor
      */
     public SolicitudDTO crearSolicitud(CrearSolicitudRequest request) {
-        log.info("Creando solicitud de transporte");
-        
-        // 1. Validar/crear cliente
-        Cliente cliente = obtenerOCrearCliente(request.getCliente());
-        log.info("Cliente procesado: ID={}", cliente.getId());
-        
-        // 2. Crear contenedor
-        Contenedor contenedor = crearContenedor(cliente.getId(), request.getContenedor(), 
-                                                request.getOrigenDireccion());
-        log.info("Contenedor creado: ID={}, Identificación={}", 
-                contenedor.getId(), contenedor.getNumeroIdentificacion());
-        
-        // 3. Crear solicitud
-        Solicitud solicitud = Solicitud.builder()
-            .clienteId(cliente.getId())
-            .contenedorId(contenedor.getId())
-            .origenDireccion(request.getOrigenDireccion())
-            .destinoDireccion(request.getDestinoDireccion())
-            .estado("BORRADOR")
-            .fechaCreacion(LocalDateTime.now())
-            .fechaActualizacion(LocalDateTime.now())
-            .build();
-        
-        Solicitud guardada = solicitudRepository.save(solicitud);
-        log.info("Solicitud creada con ID: {}", guardada.getId());
-        
-        // Integración con ms-logistica: calcular todas las rutas tentativas según distancias
-        List<RutaDTO> rutasCalculadas = null;
         try {
-            rutasCalculadas = logisticaClient.calcularRutasTentativas(
-                guardada.getId(),
-                request.getOrigenDireccion(),
-                request.getDestinoDireccion(),
-                request.getContenedor().getPesoKg(),
-                request.getContenedor().getVolumenM3()
-            );
+            log.info("📋 =========== INICIANDO CREACIÓN DE SOLICITUD ===========");
+            log.info("Origen: {} → Destino: {}", request.getOrigenDireccion(), request.getDestinoDireccion());
             
-            // Si se generaron opciones, utilizar la más económica para el estimado
-            if (rutasCalculadas != null && !rutasCalculadas.isEmpty()) {
-                RutaDTO mejorRuta = rutasCalculadas.stream()
-                        .min(java.util.Comparator.comparing(RutaDTO::getCostoTotalEstimado))
-                        .orElse(rutasCalculadas.get(0));
+            // 1. Validar/crear cliente
+            log.info("1️⃣ Validando/creando cliente...");
+            Cliente cliente = obtenerOCrearCliente(request.getCliente());
+            log.info("✅ Cliente procesado: ID={}, Email={}", cliente.getId(), cliente.getEmail());
+            
+            // 2. Crear contenedor (AQUÍ se valida que no esté en uso)
+            log.info("2️⃣ Validando/creando contenedor...");
+            Contenedor contenedor = crearContenedor(cliente.getId(), request.getContenedor(), 
+                                                    request.getOrigenDireccion());
+            log.info("✅ Contenedor procesado: ID={}, Identificación={}, Estado={}", 
+                    contenedor.getId(), contenedor.getNumeroIdentificacion(), contenedor.getEstado());
+            
+            // 3. Crear solicitud
+            log.info("3️⃣ Creando solicitud...");
+            Solicitud solicitud = Solicitud.builder()
+                .clienteId(cliente.getId())
+                .contenedorId(contenedor.getId())
+                .origenDireccion(request.getOrigenDireccion())
+                .destinoDireccion(request.getDestinoDireccion())
+                .estado("BORRADOR")
+                .fechaCreacion(LocalDateTime.now())
+                .fechaActualizacion(LocalDateTime.now())
+                .build();
+            
+            Solicitud guardada = solicitudRepository.save(solicitud);
+            log.info("✅ Solicitud creada con ID: {}", guardada.getId());
+            
+            // Integración con ms-logistica: calcular todas las rutas tentativas según distancias
+            log.info("4️⃣ Calculando rutas tentativas...");
+            List<RutaDTO> rutasCalculadas = null;
+            try {
+                rutasCalculadas = logisticaClient.calcularRutasTentativas(
+                    guardada.getId(),
+                    request.getOrigenDireccion(),
+                    request.getDestinoDireccion(),
+                    request.getContenedor().getPesoKg(),
+                    request.getContenedor().getVolumenM3()
+                );
                 
-                guardada.setCostoEstimado(mejorRuta.getCostoTotalEstimado());
-                guardada.setTiempoEstimadoHoras(mejorRuta.getTiempoEstimadoHoras());
-                guardada = solicitudRepository.save(guardada);
-                
-                log.info("✅ {} rutas calculadas para solicitud {}. Mejor opción: {} ({}km, ${}, {}hs)", 
-                        rutasCalculadas.size(), guardada.getId(), 
-                        mejorRuta.getEstrategia(), 
-                        mejorRuta.getDistanciaTotal(), 
-                        mejorRuta.getCostoTotalEstimado(), 
-                        mejorRuta.getTiempoEstimadoHoras());
+                // Si se generaron opciones, utilizar la más económica para el estimado
+                if (rutasCalculadas != null && !rutasCalculadas.isEmpty()) {
+                    RutaDTO mejorRuta = rutasCalculadas.stream()
+                            .min(java.util.Comparator.comparing(RutaDTO::getCostoTotalEstimado))
+                            .orElse(rutasCalculadas.get(0));
+                    
+                    guardada.setCostoEstimado(mejorRuta.getCostoTotalEstimado());
+                    guardada.setTiempoEstimadoHoras(mejorRuta.getTiempoEstimadoHoras());
+                    guardada = solicitudRepository.save(guardada);
+                    
+                    log.info("✅ {} rutas calculadas para solicitud (Mejor: {} - {}km - ${} - {}hs)", 
+                            rutasCalculadas.size(), 
+                            mejorRuta.getEstrategia(), 
+                            mejorRuta.getDistanciaTotal(), 
+                            mejorRuta.getCostoTotalEstimado(), 
+                            mejorRuta.getTiempoEstimadoHoras());
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ No se pudo calcular rutas automáticamente para solicitud {}: {}", 
+                        guardada.getId(), e.getMessage());
             }
+            
+            log.info("📋 =========== SOLICITUD CREADA EXITOSAMENTE ===========");
+            return convertirASolicitudDTO(guardada, rutasCalculadas);
+            
+        } catch (IllegalStateException e) {
+            // Es una validación deliberada (contenedor en uso, etc)
+            log.error("❌ Validación fallida: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.warn("No se pudo calcular rutas automáticamente para solicitud {}: {}", 
-                    guardada.getId(), e.getMessage());
+            log.error("❌ Error inesperado al crear solicitud: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al crear solicitud: " + e.getMessage(), e);
         }
-        
-        // devolver la solicitud junto a todas las rutas creadas
-        return convertirASolicitudDTO(guardada, rutasCalculadas);
     }
     
     /**
@@ -112,36 +127,60 @@ public class SolicitudService {
     
     /**
      * Obtiene o crea un contenedor asociado al cliente.
-     * Si el contenedor ya existe por número de identificación, se reutiliza y pasa a EN_ESPERA.
-     * Si no existe, se crea uno nuevo con estado EN_ESPERA.
+     * - Si el contenedor existe y está EN_ESPERA/EN_TRANSITO → RECHAZAR (ya está asignado)
+     * - Si el contenedor existe y está ENTREGADO/CREADO → permitir reasignación
+     * - Si no existe → crear uno nuevo
      */
     private Contenedor crearContenedor(Long clienteId, 
                                       CrearSolicitudRequest.ContenedorSimpleDTO dto,
                                       String ubicacionInicial) {
         
+        String numeroIdentificacion = dto.getNumeroIdentificacion();
+        log.info("🔍 Buscando contenedor con número de identificación: '{}'", numeroIdentificacion);
+        
         // Buscar si el contenedor ya existe por número de identificación
         java.util.Optional<Contenedor> contenedorExistente = 
-            contenedorRepository.findByNumeroIdentificacion(dto.getNumeroIdentificacion());
+            contenedorRepository.findByNumeroIdentificacion(numeroIdentificacion);
         
         if (contenedorExistente.isPresent()) {
             Contenedor existente = contenedorExistente.get();
-            log.info("Contenedor existente encontrado: ID={}, Identificación={}", 
-                    existente.getId(), existente.getNumeroIdentificacion());
+            String estadoActual = existente.getEstado();
             
-            // Cambiar estado a EN_ESPERA al asignarlo a una solicitud
+            log.info("✅ Contenedor ENCONTRADO en BD: ID={}, NumId='{}', Estado='{}', ClienteID={}", 
+                    existente.getId(), numeroIdentificacion, estadoActual, existente.getClienteId());
+            
+            // ✅ VALIDACIÓN CRÍTICA: Si el contenedor está en uso (EN_ESPERA o EN_TRANSITO), RECHAZAR
+            if ("EN_ESPERA".equals(estadoActual) || "EN_TRANSITO".equals(estadoActual)) {
+                String mensaje = String.format(
+                    "❌ CONTENEDOR EN USO: '%s' está en estado '%s' (asignado a otra solicitud). " +
+                    "No puede reutilizarse hasta que se complete o cancele esa solicitud.",
+                    numeroIdentificacion, estadoActual
+                );
+                log.error(mensaje);
+                throw new IllegalStateException(mensaje);
+            }
+            
+            // Si llegamos aquí: estado es CREADO, ENTREGADO, o EN_DEPOSITO → permitir reasignación
+            log.info("🔄 Reasignando contenedor '{}' a nueva solicitud (estado anterior: '{}')", 
+                    numeroIdentificacion, estadoActual);
+            
             existente.setEstado("EN_ESPERA");
+            existente.setClienteId(clienteId);
+            existente.setUbicacionActual(ubicacionInicial);
+            existente.setObservaciones(dto.getObservaciones());
+            
             Contenedor actualizado = contenedorRepository.save(existente);
-            log.info("Estado del contenedor {} actualizado a EN_ESPERA", existente.getId());
+            log.info("✅ Contenedor '{}' actualizado: ID={}, Estado=EN_ESPERA", 
+                    numeroIdentificacion, actualizado.getId());
             return actualizado;
         }
         
         // Si no existe, crear uno nuevo
-        log.info("Contenedor no existe, creando nuevo con identificación: {}", 
-                dto.getNumeroIdentificacion());
+        log.info("📦 Contenedor '{}' NO EXISTS en BD. Creando uno nuevo...", numeroIdentificacion);
         
         Contenedor contenedor = Contenedor.builder()
             .clienteId(clienteId)
-            .numeroIdentificacion(dto.getNumeroIdentificacion())
+            .numeroIdentificacion(numeroIdentificacion)
             .pesoKg(dto.getPesoKg())
             .volumenM3(dto.getVolumenM3())
             .tipo(dto.getTipo() != null ? dto.getTipo() : "ESTANDAR")
@@ -151,7 +190,11 @@ public class SolicitudService {
             .observaciones(dto.getObservaciones())
             .build();
         
-        return contenedorRepository.save(contenedor);
+        Contenedor guardado = contenedorRepository.save(contenedor);
+        log.info("✅ Contenedor CREADO: ID={}, NumId='{}', Estado=EN_ESPERA", 
+                guardado.getId(), numeroIdentificacion);
+        
+        return guardado;
     }
     
     /**
@@ -206,8 +249,8 @@ public class SolicitudService {
         solicitud.setEstado(nuevoEstado);
         solicitud.setFechaActualizacion(LocalDateTime.now());
         
-        // Si se finaliza, calcular costos reales y generar factura
-        if ("FINALIZADA".equals(nuevoEstado)) {
+        // Si se finaliza (o se marca como entregada), calcular costos reales y generar factura
+        if ("FINALIZADA".equals(nuevoEstado) || "ENTREGADA".equals(nuevoEstado)) {
             finalizarSolicitudConCalculos(solicitud);
         }
         
@@ -225,27 +268,31 @@ public class SolicitudService {
             // Obtener todos los tramos de la solicitud (para tiempo real y validación)
             List<TramoDTO> tramos = logisticaClient.listarTramosPorSolicitud(solicitud.getId());
             if (tramos.isEmpty()) {
-                log.warn("⚠️ No hay tramos para la solicitud {}", solicitud.getId());
-                return;
+                log.warn("⚠️ No hay tramos para la solicitud {}. Se generará factura igualmente.", solicitud.getId());
             }
 
-            // Calcular tiempo real en horas
+            // Calcular tiempo real en horas (solo si hay datos de tramos)
             Double tiempoRealHoras = null;
-            LocalDateTime primeraFechaInicio = tramos.stream()
-                    .filter(t -> t.getFechaInicio() != null)
-                    .map(TramoDTO::getFechaInicio)
-                    .min(LocalDateTime::compareTo)
-                    .orElse(null);
+            if (!tramos.isEmpty()) {
+                LocalDateTime primeraFechaInicio = tramos.stream()
+                        .filter(t -> t.getFechaInicio() != null)
+                        .map(TramoDTO::getFechaInicio)
+                        .min(LocalDateTime::compareTo)
+                        .orElse(null);
 
-            LocalDateTime ultimaFechaFin = tramos.stream()
-                    .filter(t -> t.getFechaFin() != null)
-                    .map(TramoDTO::getFechaFin)
-                    .max(LocalDateTime::compareTo)
-                    .orElse(null);
+                LocalDateTime ultimaFechaFin = tramos.stream()
+                        .filter(t -> t.getFechaFin() != null)
+                        .map(TramoDTO::getFechaFin)
+                        .max(LocalDateTime::compareTo)
+                        .orElse(null);
 
-            if (primeraFechaInicio != null && ultimaFechaFin != null) {
-                long minutos = java.time.Duration.between(primeraFechaInicio, ultimaFechaFin).toMinutes();
-                tiempoRealHoras = minutos / 60.0;
+                if (primeraFechaInicio != null && ultimaFechaFin != null) {
+                    long minutos = java.time.Duration.between(primeraFechaInicio, ultimaFechaFin).toMinutes();
+                    tiempoRealHoras = minutos / 60.0;
+                }
+            } else {
+                // Si no tenemos datos de tramos, dejamos tiempoReal en 0 para reflejar que no se pudo calcular
+                tiempoRealHoras = 0.0;
             }
 
             // Generar factura y usar su total como costo real
@@ -339,6 +386,9 @@ public class SolicitudService {
         contenedor.setUbicacionActual(solicitud.getDestinoDireccion());
         // Lat/Lon eliminados - solo usamos direcciones
         contenedorRepository.save(contenedor);
+
+        // Generar factura automáticamente al entregar la solicitud
+        finalizarSolicitudConCalculos(solicitud);
         
         Solicitud finalizada = solicitudRepository.save(solicitud);
         log.info("Solicitud ID={} finalizada. Costo real=${}, Tiempo real={}hs", 
@@ -473,6 +523,61 @@ public class SolicitudService {
             log.error("Error al obtener rutas de solicitud {}: {}", solicitudId, e.getMessage());
             throw new RuntimeException("No se pudieron obtener las rutas de la solicitud", e);
         }
+    }
+    
+    /**
+     * Finaliza una solicitud y libera todos los recursos asociados
+     */
+    public SolicitudDTO finalizarSolicitud(Long solicitudId) {
+        log.info("📋 Finalizando solicitud {} y liberando recursos", solicitudId);
+        
+        Solicitud solicitud = solicitudRepository.findById(solicitudId)
+            .orElseThrow(() -> new RuntimeException("Solicitud no encontrada con ID: " + solicitudId));
+        
+        // ✅ Liberar contenedor
+        if (solicitud.getContenedorId() != null) {
+            Contenedor contenedor = contenedorRepository.findById(solicitud.getContenedorId()).orElse(null);
+            if (contenedor != null) {
+                contenedor.setEstado("ENTREGADO"); // O DISPONIBLE según tu lógica
+                contenedorRepository.save(contenedor);
+                log.info("✅ Contenedor {} liberado a estado ENTREGADO", contenedor.getId());
+            }
+        }
+        
+        // Marcar solicitud como finalizada
+        solicitud.setEstado("COMPLETADA");
+        solicitud.setFechaEntrega(LocalDateTime.now());
+        Solicitud finalizada = solicitudRepository.save(solicitud);
+        
+        log.info("✅ Solicitud {} finalizada. Recursos liberados.", solicitudId);
+        return convertirASolicitudDTO(finalizada);
+    }
+    
+    /**
+     * Cancela una solicitud y libera todos los recursos asociados
+     */
+    public SolicitudDTO cancelarSolicitud(Long solicitudId, String razon) {
+        log.info("❌ Cancelando solicitud {} - Razón: {}", solicitudId, razon);
+        
+        Solicitud solicitud = solicitudRepository.findById(solicitudId)
+            .orElseThrow(() -> new RuntimeException("Solicitud no encontrada con ID: " + solicitudId));
+        
+        // ✅ Liberar contenedor
+        if (solicitud.getContenedorId() != null) {
+            Contenedor contenedor = contenedorRepository.findById(solicitud.getContenedorId()).orElse(null);
+            if (contenedor != null) {
+                contenedor.setEstado("CREADO"); // Volver a estado disponible
+                contenedorRepository.save(contenedor);
+                log.info("✅ Contenedor {} liberado a estado CREADO", contenedor.getId());
+            }
+        }
+        
+        // Marcar solicitud como cancelada
+        solicitud.setEstado("CANCELADA");
+        Solicitud cancelada = solicitudRepository.save(solicitud);
+        
+        log.info("✅ Solicitud {} cancelada. Recursos liberados.", solicitudId);
+        return convertirASolicitudDTO(cancelada);
     }
 }
 

@@ -7,6 +7,7 @@ C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\client\FacturaDTO.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\repository\DepositoRepository.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\controller\LogisticaController.java
+C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\dto\RegistrarEventoRequest.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\dto\DepositoDTO.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\dto\TransportistaDTO.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\entity\Transportista.java
@@ -34,5 +35,6 @@ C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\dto\googlemaps\Location.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\service\RutaService.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\dto\googlemaps\Route.java
+C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\client\TrackingClient.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\dto\RutaDTO.java
 C:\Users\pedro\Desktop\proyecto propio\Tp-backend-\transportes\ms-logistica\src\main\java\com\tpi\logistica\dto\googlemaps\Duration.java

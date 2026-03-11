@@ -240,4 +240,20 @@ public class SolicitudController {
         List<RutaDTO> rutas = solicitudService.obtenerRutasSolicitud(id);
         return ResponseEntity.ok(rutas);
     }
+    
+    @PostMapping("/{id}/cancelar")
+    @Operation(
+        summary = "Cancelar solicitud y liberar recursos",
+        description = "Cancela una solicitud y libera todos los recursos asociados (contenedor, transportista, camión, etc). Rol: CLIENTE, OPERADOR"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Solicitud cancelada y recursos liberados"),
+        @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+    })
+    public ResponseEntity<SolicitudDTO> cancelarSolicitud(
+            @Parameter(description = "ID de la solicitud") @PathVariable Long id,
+            @Parameter(description = "Razón de la cancelación") @RequestParam String razon) {
+        SolicitudDTO solicitud = solicitudService.cancelarSolicitud(id, razon);
+        return ResponseEntity.ok(solicitud);
+    }
 }
